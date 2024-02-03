@@ -1,11 +1,12 @@
 import torch
 import numpy as np 
 import matplotlib.pyplot as plt
-
+import torch.nn as nn
 
 from torchvision import datasets
 from torchvision.transforms import transforms
 import inputImageAnalysis
+import mlp_network
 
 # Note:: STEP 1
 # number of subprocesses to use for data loading.
@@ -41,5 +42,65 @@ images = images.numpy()
 
 # Uncomment and pass a single image for further analysis
 #analyserObj.analyser(images[1]) 
+
+# calling nn model
+# Initializing the network
+model = mlp_network.Net()
+print(model)
+
+# Cross Entropy Function = applies softmax to the output layer and then calculate log loss.
+# Specify loss function (categorical cross-entropy)
+criterion = nn.CrossEntropyLoss()
+# specify optimizer and learning rate
+optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
+
+# Training and Learning from a batch of data
+# 1. clear the gradients of all optimized variables
+# 2. Forward pass: compute predicted outputs by passing inputs to the model.
+# 3. Calculate the loss
+# 4. Backward Pass : Compute gradient of the loss with respect to model parameters.
+# 5. Perform a single optimisation step. (parameter update)
+# 6. Update average training loss.
+
+# Number of Epochs to train the model.
+n_epochs = 50
+
+# prep model for training
+model.train() 
+
+for epoch in range(n_epochs):
+
+    # monitor train loss
+    train_loss = 0.0
+
+    #####################################
+    # Train the model
+    #####################################
+
+    for data, target in train_loader:
+
+        # clear the gradients of all optimized variables
+        optimizer.zero_grad()
+
+        # forward pass: compute predicted outputs by passing inputs to the model.
+        output = model(data)
+
+        # calculate the loss
+        loss = criterion(output, target)
+
+        # backward pass: compute gradient of the loss with respect to model parameters
+        loss.backward()
+
+        # perform a single optimisation step (parameter update)
+        optimizer.step()
+
+        # update running training loss
+        train_loss += loss.item()*data.size(0)
+
+    # print training statistics
+    # calculate average loss over an epoch
+    train_loss = train_loss/len(train_loader.dataset)
+
+    print('Epoch: {} \tTraining Loss: {:.6f}'.format(epoch+1, train_loss))
 
 
