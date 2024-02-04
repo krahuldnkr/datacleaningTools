@@ -7,6 +7,7 @@ from torchvision import datasets
 from torchvision.transforms import transforms
 import inputImageAnalysis
 import mlp_network
+import reusingTrainedModel
 
 # Note:: STEP 1
 # number of subprocesses to use for data loading.
@@ -63,7 +64,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
 # 6. Update average training loss.
 
 # Number of Epochs to train the model.
-n_epochs = 50
+n_epochs = 70
 
 # prep model for training
 model.train() 
@@ -101,6 +102,9 @@ for epoch in range(n_epochs):
     # calculate average loss over an epoch
     train_loss = train_loss/len(train_loader.dataset)
 
-    print('Epoch: {} \tTraining Loss: {:.6f}'.format(epoch+1, train_loss))
-
+    print("Epoch: {} \tTraining Loss: {:.6f}".format(epoch+1, train_loss))
+    
+# Saving the trained model
+saveModelObj = reusingTrainedModel.reuseTrainedModels()
+saveModelObj.saveModel(model_=model)
 
