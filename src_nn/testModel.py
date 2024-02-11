@@ -3,6 +3,7 @@ import torch.nn as nn
 import reusingTrainedModel
 import mlp_network
 import numpy as np
+import matplotlib.pyplot as plt
 
 from torchvision import datasets
 import torchvision.transforms as transforms
@@ -27,7 +28,7 @@ class modelTester():
 
         return test_loader
     
-    def aggModelStats(self):
+    def testModelStats(self):
 
         # creating model object
         model_ = mlp_network.Net()
@@ -54,7 +55,7 @@ class modelTester():
             
             #forward pass: compute predicted outputs by passing inputs to the model
             output = model_(data)
-            
+
             # calculate the loss
             loss = criterion(output, target)
 
@@ -64,15 +65,19 @@ class modelTester():
             # convert output probabilities to predicted class
             _, pred = torch.max(output, 1)
 
+
             # compare predictions to true lable
-            correct = np.squeeze(pred.eq(target.data.view_as(pred)))
+            correct = pred.eq(target.data)
 
             # calculate test accuracy for each object class
             for i in range(self.batch_size):
                 label = target.data[i]
                 class_correct[label] += correct[i].item()
                 class_total[label] += 1
+            
+        self.aggModelStats(test_loss, class_correct, class_total, test_loader_=test_loader_)
 
+    def aggModelStats(self, test_loss, class_correct, class_total, test_loader_):
 
         # calculate and print avg test loss
         test_loss = test_loss/len(test_loader_.dataset)
@@ -91,7 +96,42 @@ class modelTester():
         print()
         print('Test Accuracy (Overall): %2d%% (%2d/%2d)' % (100.*(np.sum(class_correct)/np.sum(class_total)),np.sum(class_correct),np.sum(class_total)))
 
+    def visualizeTestResults(self):
+
+        test_loader = self.loadTestData()
+        
+        # obtain one batch of test images
+        dataiter = iter(test_loader)
+        images, labels = next(dataiter)
+
+        # creating model object
+        model_ = mlp_network.Net()
+
+        # load the model to be tested
+        loadObj = reusingTrainedModel.reuseTrainedModels()
+        model_  = loadObj.loadModel(model_=model_)
+
+        # get sample outputs
+        output = model_(images)
+        
+        # convert output probabilities to predicted class
+        _, preds = torch.max(output, 1)
+        
+        # prep images for display
+        images = images.numpy()
+
+        # plot the images in the batch, along with predicted and true labels
+        fig = plt.figure(figsize=(25,4))
+
+        for idx in np.arange(20):
+            ax = fig.add_subplot(2, 10, idx+1, xticks=[], yticks=[])
+            ax.imshow(np.squeeze(images[idx]), cmap='gray')
+            ax.set_title("{} ({})".format(str(preds[idx].item()), str(labels[idx].item())),
+                         color = ("green" if preds[idx] == labels[idx] else "red"))
+        plt.show()
 
 modelTestObj = modelTester()
-modelTestObj.aggModelStats()
+modelTestObj.testModelStats()
 print("Testing Complpeted")
+
+modelTestObj.visualizeTestResults()
