@@ -19,6 +19,3 @@ class reuseTrainedModels:
         model_.load_state_dict(state_dict_)
 
         return model_
-
-
-

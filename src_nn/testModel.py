@@ -132,6 +132,6 @@ class modelTester():
 
 modelTestObj = modelTester()
 modelTestObj.testModelStats()
-print("Testing Complpeted")
+print("Testing Completed")
 
 modelTestObj.visualizeTestResults()

@@ -26,7 +26,7 @@ class inputImageAnalysis:
                             color='white' if img[x][y]<thresh else 'black')
         plt.show()
 
-    def multipleImagePlotter(self, images, labels):
+    def multipleImagePlotter(self, images, labels ):
         """_summary_
 
         Args:

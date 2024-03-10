@@ -5,27 +5,52 @@ import torch.nn as nn
 
 from torchvision import datasets
 from torchvision.transforms import transforms
+from torch.utils.data.sampler import SubsetRandomSampler
 import inputImageAnalysis
 import mlp_network
 import reusingTrainedModel
+
+# check if CUDA is available
+train_on_gpu = torch.cuda.is_available()
+
+if not train_on_gpu:
+    print('CUDA is not available. Training on CPU ...')
+else:
+    print('CUDA is available! Training on GPU ...')
+
+
 
 # Note:: STEP 1
 # number of subprocesses to use for data loading.
 num_workers = 0
 # how many samples per batch to load.
 batch_size = 20
+# percent of training set to use as validation.
+valid_size = 0.0
 
 # convert data to torch.FloatSensor.
 # No input image pre-processing required for the MNIST dataset.
-transform = transforms.ToTensor()
+transform = transforms.Compose([transforms.ToTensor()])
 
 # choose the training and test datasets.
-train_data = datasets.MNIST(root= 'data', train = True, download=True, transform=transform)
-test_data  = datasets.MNIST(root='data',  train =False,  download=True, transform=transform)
+train_data = datasets.MNIST(root = 'data', train = True,   download = True, transform = transform)
+test_data  = datasets.MNIST(root = 'data', train = False,  download = True, transform = transform)
+
+# Obtain training indices that will be used for validation
+num_train = len(train_data)
+indices   = list(range(num_train))
+np.random.shuffle(indices)
+split = int(np.floor(valid_size * num_train))
+train_idx, valid_idx = indices[split:], indices[:split]
+
+# Define samplers for obtaining training and validation batches
+train_sampler = SubsetRandomSampler(train_idx)
+valid_sampler = SubsetRandomSampler(valid_idx)
 
 # prepare dataLoaders
-train_loader = torch.utils.data.DataLoader(train_data, batch_size = 30, num_workers = num_workers)
-test_loader  = torch.utils.data.DataLoader(test_data, batch_size = 30, num_workers = num_workers)
+train_loader = torch.utils.data.DataLoader(train_data, batch_size = 30, sampler = train_sampler, num_workers = num_workers)
+valid_loader = torch.utils.data.DataLoader(train_data, batch_size = 30, sampler = valid_sampler, num_workers = num_workers)
+test_loader  = torch.utils.data.DataLoader(test_data,  batch_size = 30, num_workers = num_workers)
 
 # Note:: STEP 2 
 # 1. Take a look at the data and make sure it is loaded correctly.
@@ -47,6 +72,10 @@ images = images.numpy()
 # calling nn model
 # Initializing the network
 model = mlp_network.Net()
+
+if train_on_gpu:
+    model.cuda()
+
 print(model)
 
 # Cross Entropy Function = applies softmax to the output layer and then calculate log loss.
@@ -64,7 +93,8 @@ optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
 # 6. Update average training loss.
 
 # Number of Epochs to train the model.
-n_epochs = 70
+n_epochs       = 50
+valid_loss_min = np.Inf
 
 # prep model for training
 model.train() 
@@ -73,12 +103,17 @@ for epoch in range(n_epochs):
 
     # monitor train loss
     train_loss = 0.0
+    valid_loss = 0.0
 
     #####################################
     # Train the model
     #####################################
 
     for data, target in train_loader:
+        
+        # move tensors to GPU if CUDA is available
+        if train_on_gpu:
+            data, target = data.cuda(), target.cuda()
 
         # clear the gradients of all optimized variables
         optimizer.zero_grad()
@@ -98,11 +133,38 @@ for epoch in range(n_epochs):
         # update running training loss
         train_loss += loss.item()*data.size(0)
 
+    ####################################
+    # Validate the model
+    ####################################
+    model.eval()
+    for data, target in valid_loader:
+
+        # move tensors to GPU if CUDA is available
+        if train_on_gpu:
+            data, target = data.cuda(), target.cuda()
+        
+
+        # forward pass: compute predicted outputs by passing imputs to the model
+        output = model(data)
+        # calculate the batch loss
+        loss = criterion(output, target)
+        # update average validation loss
+        valid_loss += loss.item() * data.size(0)
+
+
     # print training statistics
     # calculate average loss over an epoch
-    train_loss = train_loss/len(train_loader.dataset)
+    train_loss = train_loss/len(train_loader.sampler)
+    valid_loss = 0#valid_loss/len(valid_loader.sampler)
 
-    print("Epoch: {} \tTraining Loss: {:.6f}".format(epoch+1, train_loss))
+    # print training/validation statistics
+    print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f}'.format(epoch, train_loss, valid_loss))
+
+    if(valid_loss <= valid_loss_min):
+        valid_loss_min = valid_loss
+
+
+    #print("Epoch: {} \tTraining Loss: {:.6f}".format(epoch+1, train_loss))
     
 # Saving the trained model
 saveModelObj = reusingTrainedModel.reuseTrainedModels()
