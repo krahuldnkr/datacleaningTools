@@ -87,10 +87,20 @@ class mdp_gridworld:
         return new_state
     
     def get_state_table(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         print(self.state_table)
         return self.state_table
     
     def iterative_policy_evaluation(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         # used for appproximating V 
         del_step = np.Inf; 
         print(del_step)
@@ -113,25 +123,24 @@ class mdp_gridworld:
 
                     # policy is equiprobable, with U=(-1, 0), D = (1, 0), L = (0, -1), R = (0 ,1)
                     action = (-1, 0)    # UP
-                    next_state_up = self.state_transition(action)
-                    updated_state_value = self.reward_defn(action) + self.gamma * self.state_table[next_state_up[0]][next_state_up[1]]
+                    # equiprobable policy 
+                    pi_s_a = 0.25    
 
-                    print("after up",updated_state_value)
+                    next_state_up = self.state_transition(action)
+                    updated_state_value = pi_s_a * (self.reward_defn(action) + self.gamma * self.state_table[next_state_up[0]][next_state_up[1]])
+
                     action = (1, 0) # DOWN
                     next_state_dwn = self.state_transition(action)
-                    updated_state_value = updated_state_value + self.reward_defn(action) + self.gamma * self.state_table[next_state_dwn[0]][next_state_dwn[1]]
+                    updated_state_value = updated_state_value + pi_s_a*(self.reward_defn(action) + self.gamma * self.state_table[next_state_dwn[0]][next_state_dwn[1]])
 
-                    print("after dwn",updated_state_value)
                     action = (0, -1) # Left
                     next_state_lft = self.state_transition(action)
-                    updated_state_value = updated_state_value + self.reward_defn(action) + self.gamma * self.state_table[next_state_lft[0]][next_state_lft[1]]
+                    updated_state_value = updated_state_value + pi_s_a*(self.reward_defn(action) + self.gamma * self.state_table[next_state_lft[0]][next_state_lft[1]])
 
-                    print("after lft",updated_state_value)
                     action = (0, 1) # Right
                     next_state_rt = self.state_transition(action)
-                    updated_state_value = updated_state_value + self.reward_defn(action) + self.gamma * self.state_table[next_state_rt[0]][next_state_rt[1]]
+                    updated_state_value = updated_state_value + pi_s_a*(self.reward_defn(action) + self.gamma * self.state_table[next_state_rt[0]][next_state_rt[1]])
 
-                    print("after rt",updated_state_value)
                     # updating the value of the current state
                     self.state_table[i][j] = updated_state_value
 
@@ -139,20 +148,15 @@ class mdp_gridworld:
                     del_step = np.max([del_step, np.abs(current_state_value - updated_state_value)])
                     
             del_step_array.append(del_step)  
-            if((del_step)>100):
-                print("iter", iter)
-                break
-
-
-                
-                
-            print("convergence stats: ")
-            print(del_step)        
-        print("update table after policy evaluation: ")
-        self.get_state_table()  
         return del_step_array
-        plt.plot
+    
+      
     def plotList(self, list_data):
+        """_summary_
+
+        Args:
+            list_data (_type_): _description_
+        """
         data = np.array(list_data)
         figure = plt.figure(figsize=(20, 20))
         ax = figure.add_subplot(1, 1, 1, xticks =[], yticks=[])
@@ -160,9 +164,13 @@ class mdp_gridworld:
         ax.plot(data)
 
         plt.show()
+
 # ?????????????? observation:: why for a discount factor of >0.2, the values in the state are going to infinity.
-gridWrld_obj = mdp_gridworld(height=5, width=5, start=(4, 4), terminal_state=(-1, -1), threshold=0.0001, discount_factor=0.2)
+# I was using equiprobable policy and was not weighting the value fcn with 1/4, was using 1 for all the actions (mistake corrected).    
+# since no terminal state was used, the task here was a continuing task.            
+gridWrld_obj = mdp_gridworld(height=5, width=5, start=(0, 0), terminal_state=(-1, -1), threshold=0.0001, discount_factor=0.99)
 convergence_data = gridWrld_obj.iterative_policy_evaluation()
+gridWrld_obj.get_state_table()
 gridWrld_obj.plotList(convergence_data)
 # Let us unit test the state transition block
 
